@@ -1,0 +1,9 @@
+<resources>
+  <string name="app_name">ContactsApp</string>
+
+  <string name="description">Description</string>
+  <string name="clear_history">Clear history</string>
+  <string name="user_is_not_found">User is not found</string>
+  <string name="text_splash_screen">Welcome to splash screen</string>
+  <string name="text_search">Search contacts by user name</string>
+</resources>
