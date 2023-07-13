@@ -1,5 +1,6 @@
 package com.example.contactsapp.ui.contacts
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,8 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,8 +54,6 @@ fun ContactsScreen(
   navController: NavController,
   viewModel: ContactsViewModel = hiltViewModel(),
 ) {
-  val users by viewModel.users
-  val searchedUserNotFound by viewModel.searchedUserNotFound
 
   Scaffold(
     topBar = {
@@ -65,12 +62,12 @@ fun ContactsScreen(
   ) { innerPadding ->
     Box(modifier = Modifier.padding(innerPadding)) {
 
-      if (searchedUserNotFound) {
+      if (viewModel.searchedUserNotFound.value) {
         UserNotFound()
       } else {
         Users(
           sharedViewModel = sharedViewModel,
-          usersLocal = users,
+          usersLocal = viewModel.users.value,
           navController = navController
         )
       }
@@ -82,10 +79,9 @@ fun ContactsScreen(
 @Composable
 private fun Search(viewModel: ContactsViewModel) {
   val searchedHistory by viewModel.searchedHistory
-  val searchedQuery = viewModel.searchedQuery.value
+  val searchedQuery by viewModel.searchedQuery
   val textSearch = stringResource(id = R.string.text_search)
-  var active by remember { mutableStateOf(false) }
-  var isCloseIcon by remember { mutableStateOf(searchedQuery.isNotEmpty()) }
+  val isBackEnabled by lazy { mutableStateOf(true) }
 
   LaunchedEffect(key1 = Constants.KEY_GET_ALL_SEARCHED_HISTORY) {
     viewModel.getAllSearchedHistory()
@@ -96,34 +92,34 @@ private fun Search(viewModel: ContactsViewModel) {
     query = searchedQuery,
     onQueryChange = {
       viewModel.searchedQuery.value = it
-      isCloseIcon = searchedQuery.isNotEmpty()
+      viewModel.isCloseIcon.value = searchedQuery.isNotEmpty()
     },
     onSearch = {
       viewModel.getSearchedUsersFromDb(searchedQuery = it)
       viewModel.insertQueryIntoDbAndGetAllSearchedHistory(query = it)
-      active = false
+      viewModel.isActive.value = false
     },
-    active = active,
+    active = viewModel.isActive.value,
     placeholder = {
       Text(text = textSearch)
     },
     onActiveChange = {
-      active = it
+      viewModel.isActive.value = it
     },
     leadingIcon = {
       Icon(imageVector = Icons.Default.Search, contentDescription = "Search")
     },
     trailingIcon = {
-      if (isCloseIcon) {
+      if (viewModel.isCloseIcon.value) {
         Icon(
           modifier = Modifier.clickable {
             if (searchedQuery.isNotEmpty()) {
               viewModel.getUsersFromDb()
               viewModel.searchedQuery.value = ""
-              isCloseIcon = active
+              viewModel.isCloseIcon.value = viewModel.isActive.value
             } else {
-              active = false
-              isCloseIcon = false
+              viewModel.isActive.value = false
+              viewModel.isCloseIcon.value = false
             }
           },
           imageVector = Icons.Default.Close, contentDescription = "Close"
@@ -131,6 +127,17 @@ private fun Search(viewModel: ContactsViewModel) {
       }
     }
   ) {
+
+    BackHandler(
+      enabled = isBackEnabled.value
+    ) {
+      isBackEnabled.value = false
+      viewModel.isActive.value = false
+      viewModel.isCloseIcon.value = viewModel.searchedQuery.value.isNotEmpty()
+      viewModel.getSearchedUsersFromDb(searchedQuery = viewModel.searchedQuery.value)
+      viewModel.insertQueryIntoDbAndGetAllSearchedHistory(query = viewModel.searchedQuery.value)
+    }
+
     TextButton(
       modifier = Modifier.align(Alignment.End),
       onClick = {
@@ -166,6 +173,12 @@ private fun SearchedHistoryItem(
     modifier = Modifier
       .fillMaxWidth()
       .padding(horizontal = 16.dp, vertical = 8.dp)
+      .clickable {
+        viewModel.searchedQuery.value = searchedHistory.query
+        viewModel.getSearchedUsersFromDb(searchedQuery = searchedHistory.query)
+        viewModel.isActive.value = false
+        viewModel.isCloseIcon.value = searchedHistory.query.isNotEmpty()
+      }
   ) {
 
     Icon(imageVector = Icons.Default.History, contentDescription = "Search")

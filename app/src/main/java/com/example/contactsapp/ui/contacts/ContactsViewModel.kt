@@ -30,6 +30,8 @@ class ContactsViewModel @Inject constructor(
   val searchedUserNotFound: State<Boolean> = _searchedUserNotFound
 
   val searchedQuery by lazy { mutableStateOf("") }
+  val isActive by lazy { mutableStateOf(false) }
+  val isCloseIcon by lazy { mutableStateOf(searchedQuery.value.isNotEmpty()) }
 
   init {
     getUsersFromDb()
